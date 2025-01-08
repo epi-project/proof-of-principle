@@ -1,0 +1,26 @@
+// MODEL.eflint
+//   by Tim Müller
+// 
+// This files describes the policies used in the EPI Proof-of-Concept using the eFLINT language.
+// Both scenarios (the federated direct access of data, and training on synthetic data trained in a
+// federated way) can use the same set of policies as expressed here.
+// 
+// An introduction to the eFLINT language can be found [here](https://gitlab.com/eflint/jupyter).
+// 
+// eFLINT can be used to check a certain model of a system for compliance. So the first step is to
+// model the parts of the scenario that we are interested in. This happens in this file.
+// 
+
+
+// Defines basic concepts that we want to use in our model
+Fact package Identified by String.
+Fact task Identified by package * string.
+Fact data Identified by String.
+Fact domain Identified by String.
+
+// Then, we define a few concepts that we can use to relate the first three:
+Fact task-input Identified by task * data.
+Fact task-output Identified by task * data.
+Fact executed-by Identified by task * domain.
+Fact returned-to Identified by data * domain.
+Fact owned-by Identified by data * domain.

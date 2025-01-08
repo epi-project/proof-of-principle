@@ -1,0 +1,52 @@
+// ST. ANTONIUS.eflint
+//   by Tim Müller
+// 
+// Defines the policy as used by the St. Antonius hospital.
+// 
+// Like the UMC Utrecht, it has policies to only execute code from certain, trusted packages and to
+// only allow results of specific tasks to leave the domain; no other transfers are allowed.
+// 
+
+#include "model.eflint".
+
+
+// This rule enforces that all tasks executed by the St. Antonius _must_ be tasks from one of the
+// given pre-approved packages (i.e., the St. Antonius will not execute anything else).
+Invariant only-approved-packages
+    When (Forall task:
+        task.package == "epi_rosanne" || task.package == "classifier"
+        When executed-by(task, domain("st_antonius")).
+    ).
+
+
+
+// This rule enforces that all accesses to data owned by the St. Antonius must be one of the
+// following:
+// 1. The St. Antonius accesses the data itself;
+// 2. SURF can access the result produced by `local_scs` on the St. Antonius ECT's partition, for
+//    use in `central_scs`;
+Invariant access-almost-no-data
+    When (Forall task-input:
+        // 1.
+        executed-by(task-input.task, domain("st_antonius"))
+
+        // 2.
+        || (
+            task-input.task == task(package("epi_rosanne"), "central_scs")
+            && executed-by(task-input.task, domain("surf"))
+            && (Forall task-output':
+                task-output'.task == task(package("epi_rosanne"), "local_scs")
+                && (Forall task-input':
+                    task-input'.data == data("st_antonius_ect")
+                    When task-input'.task == task-output'.task
+                )
+                When task-output'.data == task-input.data
+            )
+        )
+
+        // 3.
+
+        // Tells the reasoner to only check tasks that access St. Antonius-owned data
+        When owns(domain("st_antonius"), task-input.data)
+    ).
+
