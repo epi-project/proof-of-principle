@@ -1,0 +1,82 @@
+// SCENARIO 1 - OK
+//   by Tim Müller
+// 
+// Emulates what Brane would send to the policy engine in the case of a correct execution of the
+// first scenario.
+// 
+// If you run this file with an eFLINT reasoner, no violations should occur.
+// 
+// By default, we check the UMC Utrecht's policy. But change the `#include` here below to
+// experiment with other policies!
+// 
+
+#include "../umc_utrecht.eflint".
+
+
+//// CONTEXT /////
+// Define the code packages
++package("epi_rosanne").
++task(package("epi_rosanne"), "local_scs").
++task(package("epi_rosanne"), "central_scs").
+
+// Define the domains
++domain("st_antonius"). +domain("umc_utrecht"). +domain("surf"). +domain("researcher").
+
+// Define their datasets
++data("st_antonius_ect"). +accessible-to(data("st_antonius_ect"), domain("st_antonius")).
++data("umc_utrecht_ect"). +accessible-to(data("umc_utrecht_ect"), domain("umc_utrecht")).
+
+
+// Define the (planned) workflow of three tasks
+{
+    +call(0, task(package("epi_rosanne"), "local_scs")).
+    +assigned-to(call(0, task(package("epi_rosanne"), "local_scs")), domain("st_antonius")).
+    +call-input(call(0, task(package("epi_rosanne"), "local_scs")), data("st_antonius_ect")).
+    +call-output(call(0, task(package("epi_rosanne"), "local_scs")), data("call-0-output")).
+}
+
+{
+    +call(1, task(package("epi_rosanne"), "local_scs")).
+    +assigned-to(call(1, task(package("epi_rosanne"), "local_scs")), domain("umc_utrecht")).
+    +call-input(call(1, task(package("epi_rosanne"), "local_scs")), data("umc_utrecht_ect")).
+    +call-output(call(1, task(package("epi_rosanne"), "local_scs")), data("call-1-output")).
+}
+
+{
+    +call(2, task(package("epi_rosanne"), "central_scs")).
+    +assigned-to(call(2, task(package("epi_rosanne"), "central_scs")), domain("surf")).
+    +call-input(call(2, task(package("epi_rosanne"), "central_scs")), data("call-0-output")).
+    +call-input(call(2, task(package("epi_rosanne"), "central_scs")), data("call-1-output")).
+    +call-output(call(2, task(package("epi_rosanne"), "central_scs")), data("p-value")).
+}
+
+{
+    +returned-to(data("p-value"), domain("surf")).
+}
+
+
+
+
+
+///// SIMULATION /////
+// Emulate the execution of the workflow!
+execute(domain("st_antonius"), call(0, task(package("epi_rosanne"), "local_scs"))).
+execute(domain("umc_utrecht"), call(1, task(package("epi_rosanne"), "local_scs"))).
+transfer(
+    domain("surf"),
+    domain("st_antonius"),
+    data("call-0-output"),
+    call(2, task(package("epi_rosanne"), "central_scs"))
+).
+transfer(
+    domain("surf"),
+    domain("umc_utrecht"),
+    data("call-1-output"),
+    call(2, task(package("epi_rosanne"), "central_scs"))
+).
+execute(domain("surf"), call(2, task(package("epi_rosanne"), "central_scs"))).
+download(
+    person("researcher"),
+    domain("surf"),
+    data("p-value")
+).

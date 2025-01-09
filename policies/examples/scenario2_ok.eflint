@@ -1,0 +1,173 @@
+// SCENARIO 2 - OK
+//   by Tim Müller
+// 
+// Emulates what Brane would send to the policy engine in the case of a correct execution of the
+// second scenario.
+// 
+// If you run this file with an eFLINT reasoner, no violations should occur.
+// 
+// By default, we check the UMC Utrecht's policy. But change the `#include` here below to
+// experiment with other policies!
+// 
+
+#include "../umc_utrecht.eflint".
+
+
+//// CONTEXT /////
+// Define the code packages
++package("synthetic").
++task(package("synthetic"), "init").
++task(package("synthetic"), "central").
++task(package("synthetic"), "local").
++task(package("synthetic"), "generate").
+
+// Define the domains
++domain("st_antonius"). +domain("umc_utrecht"). +domain("surf"). +domain("researcher").
+
+// Define their datasets
++data("st_antonius_ect"). +accessible-to(data("st_antonius_ect"), domain("st_antonius")).
++data("umc_utrecht_ect"). +accessible-to(data("umc_utrecht_ect"), domain("umc_utrecht")).
+
+
+// Define the (planned) workflow of a series of tasks
+// Note that we've unrolled the repetition for two takes
+{
+    // Initialize the synthetic model
+    +call(0, task(package("synthetic"), "init")).
+    +assigned-to(call(0, task(package("synthetic"), "init")), domain("surf")).
+    +call-output(call(0, task(package("synthetic"), "init")), data("init-synth-model")).
+}
+
+{
+    // Run the local step on one of the hospitals
+    +call(1, task(package("synthetic"), "local")).
+    +assigned-to(call(1, task(package("synthetic"), "local")), domain("st_antonius")).
+    +call-input(call(1, task(package("synthetic"), "local")), data("init-synth-model")).
+    +call-input(call(1, task(package("synthetic"), "local")), data("st_antonius_etc")).
+    +call-output(call(1, task(package("synthetic"), "local")), data("local-synth-model-0")).
+}
+{
+    // Run the local step on the other of the hospitals
+    +call(2, task(package("synthetic"), "local")).
+    +assigned-to(call(2, task(package("synthetic"), "local")), domain("umc_utrecht")).
+    +call-input(call(2, task(package("synthetic"), "local")), data("init-synth-model")).
+    +call-input(call(1, task(package("synthetic"), "local")), data("umc_utrecht_ect")).
+    +call-output(call(2, task(package("synthetic"), "local")), data("local-synth-model-1")).
+}
+
+{
+    // Run the central model on the local halves
+    +call(3, task(package("synthetic"), "central")).
+    +assigned-to(call(3, task(package("synthetic"), "central")), domain("surf")).
+    +call-input(call(3, task(package("synthetic"), "central")), data("local-synth-model-0")).
+    +call-input(call(3, task(package("synthetic"), "central")), data("local-synth-model-1")).
+    +call-output(call(3, task(package("synthetic"), "central")), data("central-synth-model-0")).
+}
+
+{
+    // Run the local step again on one of the hospitals
+    +call(4, task(package("synthetic"), "local")).
+    +assigned-to(call(4, task(package("synthetic"), "local")), domain("st_antonius")).
+    +call-input(call(4, task(package("synthetic"), "local")), data("central-synth-model-0")).
+    +call-input(call(4, task(package("synthetic"), "local")), data("st_antonius_etc")).
+    +call-output(call(4, task(package("synthetic"), "local")), data("local-synth-model-2")).
+}
+{
+    // Run the local step again on the other of the hospitals
+    +call(5, task(package("synthetic"), "local")).
+    +assigned-to(call(5, task(package("synthetic"), "local")), domain("umc_utrecht")).
+    +call-input(call(5, task(package("synthetic"), "local")), data("central-synth-model-0")).
+    +call-input(call(5, task(package("synthetic"), "local")), data("umc_utrecht_ect")).
+    +call-output(call(5, task(package("synthetic"), "local")), data("local-synth-model-3")).
+}
+
+{
+    // Run the central step one final time
+    +call(6, task(package("synthetic"), "central")).
+    +assigned-to(call(6, task(package("synthetic"), "central")), domain("surf")).
+    +call-input(call(6, task(package("synthetic"), "central")), data("local-synth-model-2")).
+    +call-input(call(6, task(package("synthetic"), "central")), data("local-synth-model-3")).
+    +call-output(call(6, task(package("synthetic"), "central")), data("central-synth-model-1")).
+}
+
+{
+    // Now generate a synthetic dataset
+    +call(7, task(package("synthetic"), "generate")).
+    +assigned-to(call(7, task(package("synthetic"), "generate")), domain("surf")).
+    +call-input(call(7, task(package("synthetic"), "generate")), data("central-synth-model-1")).
+    +call-output(call(7, task(package("synthetic"), "generate")), data("synth-data")).
+}
+
+{
+    +returned-to(data("synth-data"), domain("surf")).
+}
+
+
+
+
+
+///// SIMULATION /////
+// Emulate the execution of the workflow!
+execute(domain("surf"), call(0, task(package("synthetic"), "init"))).
+transfer(
+    domain("st_antonius"),
+    domain("surf"),
+    data("init-synth-model"),
+    call(1, task(package("synthetic"), "local"))
+).
+transfer(
+    domain("umc_utrecht"),
+    domain("surf"),
+    data("init-synth-model"),
+    call(2, task(package("synthetic"), "local"))
+).
+execute(domain("st_antonius"), call(1, task(package("synthetic"), "local"))).
+execute(domain("umc_utrecht"), call(2, task(package("synthetic"), "local"))).
+transfer(
+    domain("surf"),
+    domain("st_antonius"),
+    data("local-synth-model-0"),
+    call(3, task(package("synthetic"), "central"))
+).
+transfer(
+    domain("surf"),
+    domain("umc_utrecht"),
+    data("local-synth-model-1"),
+    call(3, task(package("synthetic"), "central"))
+).
+execute(domain("surf"), call(3, task(package("synthetic"), "central"))).
+execute(domain("surf"), call(3, task(package("synthetic"), "central"))).
+transfer(
+    domain("st_antonius"),
+    domain("surf"),
+    data("central-synth-model-0"),
+    call(4, task(package("synthetic"), "local"))
+).
+transfer(
+    domain("umc_utrecht"),
+    domain("surf"),
+    data("central-synth-model-0"),
+    call(5, task(package("synthetic"), "local"))
+).
+execute(domain("st_antonius"), call(4, task(package("synthetic"), "local"))).
+execute(domain("umc_utrecht"), call(5, task(package("synthetic"), "local"))).
+transfer(
+    domain("surf"),
+    domain("st_antonius"),
+    data("local-synth-model-2"),
+    call(6, task(package("synthetic"), "central"))
+).
+transfer(
+    domain("surf"),
+    domain("umc_utrecht"),
+    data("local-synth-model-3"),
+    call(6, task(package("synthetic"), "central"))
+).
+execute(domain("surf"), call(6, task(package("synthetic"), "central"))).
+execute(domain("surf"), call(6, task(package("synthetic"), "central"))).
+execute(domain("surf"), call(7, task(package("synthetic"), "generate"))).
+download(
+    person("researcher"),
+    domain("surf"),
+    data("synth-data")
+).

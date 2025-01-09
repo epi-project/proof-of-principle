@@ -8,19 +8,100 @@
 // An introduction to the eFLINT language can be found [here](https://gitlab.com/eflint/jupyter).
 // 
 // eFLINT can be used to check a certain model of a system for compliance. So the first step is to
-// model the parts of the scenario that we are interested in. This happens in this file.
+// model the parts of the scenario that we are interested in. Then, we will express what actions
+// domains (may try to) take. Finally, we define some derivation rules that allow the reasoner to
+// encode some assumptions and restrictions about our model.
 // 
 
 
-// Defines basic concepts that we want to use in our model
+///// MODEL /////
+// Define basic concepts that we want to use in our model:
 Fact package Identified by String.
 Fact task Identified by package * string.
+Fact call Identified by int * task.
 Fact data Identified by String.
 Fact domain Identified by String.
 
 // Then, we define a few concepts that we can use to relate the first three:
-Fact task-input Identified by task * data.
-Fact task-output Identified by task * data.
-Fact executed-by Identified by task * domain.
+Fact call-input Identified by call * data.
+Fact call-output Identified by call * data.
+Fact assigned-to Identified by call * domain.
+Fact executed-by Identified by call * domain.
 Fact returned-to Identified by data * domain.
-Fact owned-by Identified by data * domain.
+Fact accessible-to Identified by data * domain.
+
+// Mark some aliases
+Placeholder person For domain.
+Placeholder sender For domain.
+Placeholder receiver For domain.
+
+
+
+
+
+///// ACTION SPACE /////
+// We say that domains can _execute_ calls.
+// 
+// Domains will police this action to limit what can happen!
+Act execute
+    Actor domain
+    Related to call
+    // When taken, this Act causes the call to be executed and all outputs to become accessible.
+    Creates executed-by(call, domain)
+    Creates (Foreach call-output: accessible-to(call-output.data, domain) When call-output.call == call)
+    // Physically, any domain can attempt to execute any call
+    Derived from (Foreach domain, call: execute(domain, call))
+    // However, we can generally state that only the person assigned to a call is allowed to
+    // execute it
+    Conditioned by (Forall assigned-to:
+        assigned-to.domain == domain
+        When assigned-to.call == call
+    )
+    // Further, we say that .
+
+// We say that domains can _transfer_ data for use as input to a call.
+// 
+// Domains will police this action to limit what can happen!
+Act transfer
+    Actor receiver
+    Related to sender, data, call
+    // When taken, this Act causes the data to be owned by somebody else as well.
+    Creates accessible-to(data, domain)
+    // Physically, any domain can attempt to transfer any data for any call
+    Derived from (Foreach receiver, sender, data, call: transfer(receiver, sender, data, call))
+    // However, we can generally say that it is weird if domains transfer data they do not have
+    // access to.
+    Conditioned by accessible-to(data, sender)
+    // Further, we say that one can only transfer data for a call if it is actually an input to
+    // that call.
+    Conditioned by call-input(call, data)
+    // Finally, it's weird if the transfer is contextualize for a call NOT done by the receiver.
+    Conditioned by assigned-to(call, receiver).
+
+// We say that domains can _download_ data for general use.
+// 
+// Domains will police this action to limit what can happen!
+Act download
+    Actor receiver
+    Related to sender, data
+    // When taken, this Act causes the data to be owned by somebody else as well.
+    Creates accessible-to(data, domain)
+    // Physically, any domain can attempt to download any data
+    Derived from (Foreach receiver, sender, data: download(receiver, sender, data))
+    // However, we can generally say that it is weird if domains transfer data they do not have
+    // access to.
+    Conditioned by accessible-to(data, sender).
+
+
+
+
+
+///// RULES /////
+// The first rule will assert that all calls have exactly one domain planned to execute it.
+Invariant all-calls-must-be-assigned-to-one-domain
+    When (Forall call: Count(Foreach assigned-to: assigned-to When assigned-to.call == call) == 1).
+
+// The second rule states that we can automatically deduce the existance of data if we see a call
+// producing it.
+Extend Fact data
+    Derived from (Foreach call-output: call-output.data).

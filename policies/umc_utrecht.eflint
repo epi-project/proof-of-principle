@@ -1,10 +1,10 @@
-// ST. ANTONIUS.eflint
+// UMC UTRECHT.eflint
 //   by Tim Müller
 // 
-// Defines the policy as used by the St. Antonius hospital.
+// Defines the policy as used by the UMC Utrecht hospital.
 // 
-// Like the UMC Utrecht, it has policies to only execute code from certain, trusted packages and to
-// only allow results of specific tasks to leave the domain; no other transfers are allowed.
+// Like the St. Antonius, it has policies to only execute code from certain, trusted packages and
+// to only allow results of specific tasks to leave the domain; no other transfers are allowed.
 // 
 // The policies are implemented by stapling additional clauses to the actions that domains can do.
 // This way, the reasoner will raise violations if actions are simulated to be taken but that
@@ -14,22 +14,22 @@
 #include "model.eflint".
 
 
-// This rule enforces that all tasks executed by the St. Antonius _must_ be tasks from one of the
-// given pre-approved packages (i.e., the St. Antonius will not execute anything else).
+// This rule enforces that all tasks executed by the UMC Utrecht _must_ be tasks from one of the
+// given pre-approved packages (i.e., the UMC Utrecht will not execute anything else).
 Extend Act execute
     Conditioned by (
         // We approve any execution that is not done by us OR, if it is, is only some possible
         // packages.
-        domain != domain("st_antonius")
+        domain != domain("umc_utrecht")
         || call.task.package == "epi_rosanne" || call.task.package == "classifier"
         || call.task.package == "synthetic"
     ).
 
 
 
-// This rule enforces that all transfers of data owned by the St. Antonius in the context of a task
+// This rule enforces that all transfers of data owned by the UMC Utrecht in the context of a task
 // must be one of the following scenarios:
-// 1. The St. Antonius accesses the data itself;
+// 1. The UMC Utrecht accesses the data itself;
 // 2. SURF wants to run `central_scs` on local results produced by `local_scs` (first scenario); or
 // 3. SURF wants to access local partitions of the synthetic data model to aggregate them (second
 //    scenario).
@@ -38,10 +38,10 @@ Extend Act execute
 Extend Act transfer
     Conditioned by (
         // We ignore any transfers not originating from us
-        sender != domain("st_antonius")
+        sender != domain("umc_utrecht")
         || (
             // 1.
-            receiver == domain("st_antonius")
+            receiver == domain("umc_utrecht")
 
             // 2.
             || (
@@ -49,7 +49,7 @@ Extend Act transfer
                 && receiver == domain("surf")
                 && (Forall call-output':
                     call-output'.call.task == task(package("epi_rosanne"), "local_scs")
-                    && assigned-to(call-output'.call, domain("st_antonius"))
+                    && assigned-to(call-output'.call, domain("umc_utrecht"))
                     When call-output'.data == data
                 )
             )
@@ -60,7 +60,7 @@ Extend Act transfer
                 && receiver == domain("surf")
                 && (Forall call-output':
                     call-output'.call.task == task(package("synthetic"), "local")
-                    && assigned-to(call-output'.call, domain("st_antonius"))
+                    && assigned-to(call-output'.call, domain("umc_utrecht"))
                     When call-output'.data == data
                 )
             )
@@ -69,27 +69,27 @@ Extend Act transfer
 
 
 
-// This rule enforces that all transfers of data owned by the St. Antonius in the context of the
+// This rule enforces that all transfers of data owned by the UMC Utrecht in the context of the
 // end of a workflow must be one of the following scenarios:
-// 1. The St. Antonius accesses the data itself; or
-// 2. SURF wants to download the results of validating a local models (i.e., its performance
+// 1. The UMC Utrecht accesses the data itself; or
+// 3. SURF wants to download the results of validating a local models (i.e., its performance
 //    metrics).
 // 
 // Everything else will raise a violation.
 Extend Act download
     Conditioned by (
         // We ignore any transfers not originating from us
-        sender != domain("st_antonius")
+        sender != domain("umc_utrecht")
         || (
             // 1.
-            receiver == domain("st_antonius")
+            receiver == domain("umc_utrecht")
 
             // 2.
             || (
                 receiver == domain("surf")
                 && (Forall call-output':
                     call-output'.call.task == task(package("classifier"), "validate")
-                    && assigned-to(call-output'.call, domain("st_antonius"))
+                    && assigned-to(call-output'.call, domain("umc_utrecht"))
                     When call-output'.data == data
                 )
             )

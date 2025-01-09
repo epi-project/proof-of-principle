@@ -1,0 +1,48 @@
+// SCENARIO 2 - FAIL
+//   by Tim Müller
+// 
+// Emulates what Brane would send to the policy engine in the case of an illegal execution of the
+// second scenario. Here, we say that the UMC Utrecht attempts to access a dataset of the St.
+// Antonius.
+// 
+// If you run this file with an eFLINT reasoner, you should see violations.
+// 
+// By default, we check the UMC Utrecht's policy. But change the `#include` here below to
+// experiment with other policies!
+// 
+
+#include "../umc_utrecht.eflint".
+
+
+//// CONTEXT /////
+// Define the code packages
++package("synthetic").
++task(package("synthetic"), "init").
++task(package("synthetic"), "central").
++task(package("synthetic"), "local").
++task(package("synthetic"), "generate").
+
+// Define the domains
++domain("st_antonius"). +domain("umc_utrecht"). +domain("surf"). +domain("researcher").
+
+// Define their datasets
++data("st_antonius_ect"). +accessible-to(data("st_antonius_ect"), domain("st_antonius")).
++data("umc_utrecht_ect"). +accessible-to(data("umc_utrecht_ect"), domain("umc_utrecht")).
+
+
+// Define the (planned) workflow of a series of tasks
+// Super simple, because attempting to download a dataset is
+{
+    +returned-to(data("st_antonius_ect"), domain("umc_utrecht")).
+}
+
+
+
+
+
+///// SIMULATION /////
+download(
+    domain("umc_utrecht"),
+    domain("st_antonius_ect"),
+    data("st_antonius_ect")
+).
