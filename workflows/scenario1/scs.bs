@@ -1,0 +1,36 @@
+// SCS.bs
+//   by Tim Müller
+// 
+// Implements the workflow that is used to execute the first scenario (federated direct access) on
+// the Brane framework.
+// 
+// In particular, it implements a local computation on both of the hospital domains, and then a
+// central computation on the trusted third-party that will aggregate the local results.
+// 
+
+import scs;
+
+
+// LOCAL COMPUTE //
+// Note that we perform the compute in parallel, since the local steps are independent
+let local_results := parallel [all] [{
+    return local_scs(new Data{ name := "umc_utrecht_ect" });
+}, {
+    return local_scs(new Data{ name := "st_antonius_ect" });
+}];
+print("Local compute complete; got "); print(len(local_results)); println(" results.");
+
+
+
+#[on("surf")]
+{
+    // GLOBAL AGGREGATION //
+    // This is the central step
+    let global_result := central_scs(local_results);
+
+
+
+    // RETURN //
+    // This step "promotes" the intermediate result to a persistent dataset, which can then be downloaded by the client.
+    return commit_result("p-value", global_result);
+}

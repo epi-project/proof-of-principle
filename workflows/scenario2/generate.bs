@@ -1,0 +1,18 @@
+// GENERATE.bs
+//   by Tim Müller
+// 
+// This workflow takes a trained synthetic data generation model and uses it to generate a new
+// synthetic ECT dataset.
+// 
+
+import synthetic;
+
+
+let epochs := 50;
+let hidden_dim := 16;
+let n_samples := 16;
+#[on("surf")]
+{
+    print("Generating "); print(n_samples); print(" samples from generator model (epochs="); print(epochs); print(",hidden_dim="); print(hidden_dim); println(")...");
+    return commit_result("synthetic_ect", generate(new Data { name := "synthetic_model" }, hidden_dim, n_samples));
+}

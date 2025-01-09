@@ -1,0 +1,37 @@
+// VALIDATE.bs
+//   by Tim Müller
+// 
+// This workflow validates a certain model by running inference on the given test set.
+// 
+// Training is done in `classifier_*.bs`.
+// 
+// By default, the workflow acts for the UMC Utrecht. Replace with the appropriate identifier of
+// the St. Antonius (`st_antonius`) to do the same for their partition. You can also change the
+// name of the classifier model to validate a different model.
+// 
+
+import classifier;
+import copy_result;
+
+
+// PATCH: We do this to circumvent downloading temporary datasets, which is bugged :(
+// See: https://github.com/epi-project/brane/issues/50
+let model := null;
+on "surf" {
+    println("Preparing dataset on SURF...");
+    model := copy_result(new Data { name := "classifier_model" });
+    print("New result: "); println(model);
+}
+
+// Collect the metrics
+let metrics := null;
+on "umc_utrecht" {
+    println("Running classifier model on UMC Utrecht...");
+    metrics := validate(model, new Data { name := "umc_utrecht_ect_test" }, "umc_utrecht_ect");
+}
+
+// Retrieve the results
+on "surf" {
+    print("Retrieving results "); print(metrics); println("...");
+    return commit_result("classifier_metrics_umc_utrecht", copy_result(metrics));
+}

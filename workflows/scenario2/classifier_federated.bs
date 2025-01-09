@@ -1,0 +1,76 @@
+// CLASSIFIER FEDERATED.bs
+//   by Tim Müller
+// 
+// This workflow trains a neural network on data partitioned across sites in the context of the
+// second scenario (federated synthetic data).
+// 
+// This workflow is used to generate a federated model against which the synthetic's performance
+// can be measured.
+// 
+
+import classifier;
+
+
+///// CONSTANTS /////
+let epochs := 50;
+
+
+
+///// INITIALIZATION /////
+let model := null;
+#[on("surf")]
+{
+    println("Initializing model...");
+    model := init();
+}
+
+
+
+let local_model_1 := null;
+let local_model_2 := null;
+let local_models := null;
+for (let i := 0; i < epochs; i := i + 1) {
+    print("Iteration ");
+    print(i + 1);
+    print(" / ");
+    print(epochs);
+    print("\n\n");
+
+    ///// LOCAL STEP /////
+    println("Running local step...");
+    local_models := parallel [all] [
+        #[on("umc_utrecht")]
+        {
+            local_model_1 := local(model, new Data { name := "umc_utrecht_ect_train" });
+            println("UMC Utrecht results:");
+            println("----------------------------------------------------------------");
+            println(get_local_stdout(local_model_1));
+            println("----------------------------------------------------------------");
+            print("\n");
+            return local_model_1;
+        },
+        #[on("st_antonius")]
+        {
+            local_model_2 := local(model, new Data { name := "st_antonius_ect_train" });
+            println("St. Antonius results:");
+            println("----------------------------------------------------------------");
+            println(get_local_stdout(local_model_2));
+            println("----------------------------------------------------------------");
+            print("\n");
+            return local_model_2;
+        }
+    ];
+
+    ///// CENTAL STEP /////
+    #[on("surf")]
+    {
+        println("Running central step...");
+        model := central(local_models);
+    }
+}
+
+
+
+///// FINAL /////
+// Promote the model
+return commit_result("classifier_model", model);

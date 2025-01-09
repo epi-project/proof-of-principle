@@ -18,7 +18,7 @@ Extend Act execute
         // We approve any execution that is not done by us OR, if it is, is only some possible
         // packages.
         domain != domain("surf")
-        || call.task.package == "epi_rosanne" || call.task.package == "classifier"
+        || call.task.package == "scs" || call.task.package == "classifier"
         || call.task.package == "synthetic"
     ).
 
@@ -35,7 +35,7 @@ Extend Act transfer
             receiver == domain("surf")
             // Otherwise, the data is the result of a `central_scs` (scenario 1)
             || (Forall call-output':
-                call-output'.call.task == task(package("epi_rosanne"), "central_scs")
+                call-output'.call.task == task(package("scs"), "central_scs")
                 && assigned-to(call-output'.call, domain("surf"))
                 When call-output'.data == data
             )
@@ -74,7 +74,7 @@ Extend Act download
             receiver == domain("surf")
             // Otherwise, the data is the result of a `central_scs` (scenario 1)
             || (Forall call-output':
-                call-output'.call.task == task(package("epi_rosanne"), "central_scs")
+                call-output'.call.task == task(package("scs"), "central_scs")
                 && assigned-to(call-output'.call, domain("surf"))
                 When call-output'.data == data
             )

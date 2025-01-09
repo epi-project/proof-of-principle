@@ -21,7 +21,7 @@ Extend Act execute
         // We approve any execution that is not done by us OR, if it is, is only some possible
         // packages.
         domain != domain("st_antonius")
-        || call.task.package == "epi_rosanne" || call.task.package == "classifier"
+        || call.task.package == "scs" || call.task.package == "classifier"
         || call.task.package == "synthetic"
     ).
 
@@ -45,10 +45,10 @@ Extend Act transfer
 
             // 2.
             || (
-                call.task == task(package("epi_rosanne"), "central_scs")
+                call.task == task(package("scs"), "central_scs")
                 && receiver == domain("surf")
                 && (Forall call-output':
-                    call-output'.call.task == task(package("epi_rosanne"), "local_scs")
+                    call-output'.call.task == task(package("scs"), "local_scs")
                     && assigned-to(call-output'.call, domain("st_antonius"))
                     When call-output'.data == data
                 )

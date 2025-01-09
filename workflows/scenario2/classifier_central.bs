@@ -1,0 +1,60 @@
+// CLASSIFIER CENTRAL.bs
+//   by Tim Müller
+// 
+// This workflow trains a neural network on some data on a single site in the context of the second
+// scenario (federated synthetic data).
+// 
+// This workflow is used to generate a baseline model against which the synthetic's performance can
+// be measured. It is also used to train on the synthetic dataset (since that's all available on
+// SURF).
+// 
+// The current workflow is on the UMC Utrecht. You can change `#[on(...)]` and the relevant dataset
+// to change where the model will be created.
+// 
+
+import classifier;
+
+
+///// CONSTANTS /////
+let epochs := 2;
+
+
+
+///// INITIALIZATION /////
+let model := null;
+#[on("umc_utrecht")]
+{
+    println("Initializing model...");
+    model := init();
+}
+
+
+
+///// LOCAL TRAINING /////
+for (let i := 0; i < epochs; i := i + 1) {
+    print("Iteration ");
+    print(i + 1);
+    print(" / ");
+    print(epochs);
+    print("\n\n");
+
+    println("Running local step...");
+    #[on("umc_utrecht")]
+    {
+        let local_model := local(model, new Data { name := "umc_utrecht_ect_train" });
+        println("Results:");
+        println("----------------------------------------------------------------");
+        println(get_local_stdout(local_model));
+        println("----------------------------------------------------------------");
+        print("\n");
+
+        // Don't forget to rename the model file to be compatible with the federated case
+        model := rename_model_to_server(local_model);
+    }
+}
+
+
+
+///// FINAL /////
+// Promote the model
+return commit_result("classifier_model", model);

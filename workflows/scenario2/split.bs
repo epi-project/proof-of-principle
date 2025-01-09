@@ -1,0 +1,24 @@
+// WORKFLOW.bs
+//   by Tim Müller
+// 
+// This workflow splits a given CSV file into ratio of training and validation data.
+// 
+// This is used to create the train- and test sets for the other workflows.
+// 
+// By default, the workflow acts for the UMC Utrecht. Replace with the appropriate identifier of
+// the St. Antonius (`st_antonius`) to do the same for their partition.
+// 
+
+import split;
+
+
+#[on("umc_utrecht")]
+{
+    // Start by splitting the dataset
+    // (change the name below to do so)
+    let train_test := split(0.8, new Data { name := "umc_utrecht_ect" });
+
+    // Extract the two datasets and commit them
+    commit_result("umc_utrecht_ect_train", extract_train(train_test));
+    commit_result("umc_utrecht_ect_test", extract_test(train_test));
+}

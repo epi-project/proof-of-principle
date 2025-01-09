@@ -1,0 +1,35 @@
+// STATS.bs
+//   by Tim Müller
+// 
+// Workflow to conduct a P-test on the synthetic & raw dataset(s).
+// 
+// By default, the workflow acts for the UMC Utrecht. Replace with the appropriate identifier of
+// the St. Antonius (`st_antonius`) to do the same for their partition.
+// 
+
+import copy_result;
+import stats;
+
+
+// Step 1: Turn the SURF synthetic dataset into a result (due to bug, see issue #50)
+let synthetic := null;
+#[on("surf")]
+{
+    println("Preparing synthetic dataset on SURF...");
+    synthetic := copy_result(new Data { name := "synthetic_ect" });
+}
+
+// Step 2: Run the analysis on the hospital
+let result := null;
+#[on("umc_utrecht")]
+{
+    println("Running P-test on UMC Utrecht...");
+    result := p_value(new Data { name := "umc_utrecht_ect" }, synthetic, "umc_utrecht");
+}
+
+// Step 3: Copy the result on SURF so we can download it from there.
+#[on("surf")]
+{
+    println("Retrieving result...");
+    return commit_result("p_value_umc_utrecht", copy_result(result));
+}

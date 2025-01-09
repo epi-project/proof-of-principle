@@ -1,0 +1,79 @@
+// SYNTHETIC.bs
+//   by Tim Müller
+// 
+// This workflow trains a synthetic data generation model on data partitioned across sites in the
+// context of the second scenario (federated synthetic data).
+// 
+// This workflow is used to create the model that can create the synthetic data.
+// 
+// By default, the workflow acts for the UMC Utrecht. Replace with the appropriate identifier of
+// the St. Antonius (`st_antonius`) to do the same for their partition.
+// 
+
+import synthetic;
+
+
+///// CONSTANTS /////
+let epochs := 50;
+let hidden_dim := 16;
+
+
+
+///// INITIALIZATION /////
+let model := null;
+#[on("surf")]
+{
+    print("Initializing model with hidden_dim="); print(hidden_dim); println("...");
+    model := init(hidden_dim);
+}
+
+
+
+let local_model_1 := null;
+let local_model_2 := null;
+let local_models := null;
+for (let i := 0; i < epochs; i := i + 1) {
+    print("Iteration ");
+    print(i + 1);
+    print(" / ");
+    print(epochs);
+    print("\n\n");
+
+    ///// LOCAL STEP /////
+    println("Running local step...");
+    local_models := parallel [all] [
+        #[on("umc_utrecht")]
+        {
+            local_model_1 := local(model, hidden_dim, new Data { name := "umc_utrecht_ect" });
+            println("UMC Utrecht results:");
+            println("----------------------------------------------------------------");
+            println(get_local_stdout(local_model_1));
+            println("----------------------------------------------------------------");
+            print("\n");
+            return local_model_1;
+        },
+        #[on("st_antonius")]
+        {
+            local_model_2 := local(model, hidden_dim, new Data { name := "st_antonius_ect" });
+            println("St. Antonius results:");
+            println("----------------------------------------------------------------");
+            println(get_local_stdout(local_model_2));
+            println("----------------------------------------------------------------");
+            print("\n");
+            return local_model_2;
+        }
+    ];
+
+    ///// CENTAL STEP /////
+    #[on("surf")]
+    {
+        println("Running central step...");
+        model := central(hidden_dim, local_models);
+    }
+}
+
+
+
+///// FINAL /////
+// Promote the model
+return commit_result("synthetic_model", model);
