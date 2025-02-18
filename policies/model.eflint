@@ -57,7 +57,6 @@ Act execute
         assigned-to.domain == domain
         When assigned-to.call == call
     )
-    // Further, we say that .
 
 // We say that domains can _transfer_ data for use as input to a call.
 // 
@@ -66,7 +65,7 @@ Act transfer
     Actor receiver
     Related to sender, data, call
     // When taken, this Act causes the data to be owned by somebody else as well.
-    Creates accessible-to(data, domain)
+    Creates accessible-to(data, receiver)
     // Physically, any domain can attempt to transfer any data for any call
     Derived from (Foreach receiver, sender, data, call: transfer(receiver, sender, data, call))
     // However, we can generally say that it is weird if domains transfer data they do not have
